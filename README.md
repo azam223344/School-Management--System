@@ -1,4 +1,4 @@
-# auth_app
+# School Management System
 
 A new Flutter project.
 
