@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function validStudent() {
+      return request.resource.data.keys().hasOnly([
+            'id',
+            'name',
+            'rollNumber',
+            'grade',
+            'age',
+            'phoneNumber',
+            'parentName',
+            'parentIdentityNumber',
+            'studentIdentityNumber',
+            'photoUrl',
+            'notes',
+            'updatedAt'
+          ]) &&
+          isNonEmptyString(request.resource.data.id) &&
+          isNonEmptyString(request.resource.data.name) &&
+          isNonEmptyString(request.resource.data.rollNumber) &&
+          isNonEmptyString(request.resource.data.grade) &&
+          isNonEmptyString(request.resource.data.age) &&
+          isNonEmptyString(request.resource.data.phoneNumber) &&
+          isNonEmptyString(request.resource.data.parentName) &&
+          isNonEmptyString(request.resource.data.parentIdentityNumber) &&
+          isNonEmptyString(request.resource.data.studentIdentityNumber) &&
+          request.resource.data.photoUrl is string &&
+          request.resource.data.notes is string;
+    }
+
+    function validTeacher() {
+      return request.resource.data.keys().hasOnly([
+            'id',
+            'name',
+            'subject',
+            'email',
+            'age',
+            'qualifications',
+            'phoneNumber',
+            'identityNumber',
+            'address',
+            'notes',
+            'updatedAt'
+          ]) &&
+          isNonEmptyString(request.resource.data.id) &&
+          isNonEmptyString(request.resource.data.name) &&
+          isNonEmptyString(request.resource.data.subject) &&
+          isNonEmptyString(request.resource.data.email) &&
+          request.resource.data.age is string &&
+          request.resource.data.qualifications is string &&
+          request.resource.data.phoneNumber is string &&
+          request.resource.data.identityNumber is string &&
+          request.resource.data.address is string &&
+          request.resource.data.notes is string;
+    }
+
+    function validClass() {
+      return request.resource.data.keys().hasOnly([
+            'id',
+            'name',
+            'teacherId',
+            'studentIds',
+            'attendance',
+            'updatedAt'
+          ]) &&
+          isNonEmptyString(request.resource.data.id) &&
+          isNonEmptyString(request.resource.data.name) &&
+          request.resource.data.studentIds is list &&
+          request.resource.data.attendance is map &&
+          (request.resource.data.teacherId == null ||
+            request.resource.data.teacherId is string);
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /students/{studentId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validStudent();
+        allow delete: if isOwner(uid);
+      }
+
+      match /teachers/{teacherId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validTeacher();
+        allow delete: if isOwner(uid);
+      }
+
+      match /classes/{classId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validClass();
+        allow delete: if isOwner(uid);
+      }
+
+      match /schoolModules/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+  }
+}
